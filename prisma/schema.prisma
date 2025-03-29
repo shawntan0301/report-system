@@ -1,0 +1,38 @@
+model report {
+  id           BigInt      @id @default(autoincrement())
+  type         ReportType
+  target_id    BigInt
+  reason       String      @db.VarChar(255)
+  description  String?
+  submitted_by BigInt?
+  resolved_by  BigInt?
+  resolved_at  DateTime?
+  created_at   DateTime    @default(now())
+
+  submitter    user?       @relation("ReportSubmittedBy", fields: [submitted_by], references: [id])
+  resolver     user?       @relation("ReportResolvedBy", fields: [resolved_by], references: [id])
+}
+
+enum ReportType {
+  review
+  user
+  business
+  service
+  other
+}
+
+model user {
+  id         BigInt   @id @default(autoincrement())
+  email      String   @unique
+  name       String?
+  role       UserRole @default(user)
+  created_at DateTime @default(now())
+
+  submitted_reports report[] @relation("ReportSubmittedBy")
+  resolved_reports  report[] @relation("ReportResolvedBy")
+}
+
+enum UserRole {
+  user
+  admin
+}
