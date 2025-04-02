@@ -1,6 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-argument */
-/* eslint-disable @typescript-eslint/no-unsafe-call */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { Webhook } from "svix";
 import { headers } from "next/headers";
@@ -82,7 +79,7 @@ export async function POST(req: Request) {
   }
 
   // Get body
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+
   const payload: ClerkWebhookPayload = await req.json();
   const body = JSON.stringify(payload);
 
@@ -109,39 +106,24 @@ export async function POST(req: Request) {
   }
   const eventType = evt.type;
   console.log(`Received webhook with ID ${id} and event type of ${eventType}`);
-  console.log("Webhook payload:", body);
 
   if (evt.type === "user.created") {
-    const {
-      first_name,
-      last_name,
-      email_addresses,
-      primary_email_address_id,
-      image_url,
-    } = payload.data;
+    const { first_name, last_name, email_addresses, primary_email_address_id } =
+      payload.data;
 
-    const emailObj = email_addresses.find(
+    const email = email_addresses.find(
       (email) => email.id === primary_email_address_id,
-    );
+    )?.email_address;
     const name = `${first_name} ${last_name}`;
 
-    let emailVerifiedDate: Date | undefined = undefined;
-    let email = undefined;
-    if (emailObj && emailObj.verification.status === "verified") {
-      emailVerifiedDate = new Date(emailObj.updated_at);
-      email = emailObj.email_address;
-    }
-
     console.log("userId created:", evt.data.id);
-    // const user = await api.user.createUser({
-    //   id,
-    //   name,
-    //   email: email ?? "",
-    //   emailVerified: emailVerifiedDate,
-    //   image: image_url,
-    // });
+    const user = await api.user.createUser({
+      name,
+      email: email ?? "",
+      role: "user",
+    });
 
-    // console.log("userId created:", user.id);
+    console.log("userId created:", user.id);
   }
 
   // fix this up later!!
@@ -151,7 +133,7 @@ export async function POST(req: Request) {
 
   // Delete user from vercel db
   if (evt.type === "user.deleted") {
-    await api.user.deleteUser({ id });
+    await api.user.deleteUser({ id: Number(id) });
     console.log("userId deleted:", evt.data.id);
   }
 
