@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+// import { useRouter } from "next/navigation";
 import { SiteHeader } from "~/components/site-header";
 import { SidebarInset, SidebarProvider } from "~/components/ui/sidebar";
 import {
@@ -8,16 +8,14 @@ import {
   TableBody,
   TableCaption,
   TableCell,
-  TableFooter,
   TableHead,
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
 import { api } from "~/trpc/react";
-import { useAuth } from "@clerk/nextjs";
 
 export default function Page() {
-  const router = useRouter();
+  // const router = useRouter();
   const { data: userRole } = api.user.getUserRole.useQuery(undefined, {
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,

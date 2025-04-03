@@ -2,7 +2,7 @@
 
 import { Button } from "~/components/ui/button";
 import { MoveRight } from "lucide-react";
-import { SignInButton, SignedIn, SignedOut, UserButton } from "@clerk/nextjs";
+import { SignInButton, SignedIn, SignedOut } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 
 export default function HomeButtons() {
