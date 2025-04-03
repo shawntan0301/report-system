@@ -13,6 +13,7 @@ export const userRouter = createTRPCRouter({
   createUser: publicProcedure
     .input(
       z.object({
+        clerkId: z.string(),
         email: z.string(),
         name: z.string().optional(),
         role: z.enum(userRole),
@@ -21,6 +22,7 @@ export const userRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       const user = await ctx.db.user.create({
         data: {
+          clerk_id: input.clerkId,
           email: input.email,
           name: input.name,
           role: input.role,

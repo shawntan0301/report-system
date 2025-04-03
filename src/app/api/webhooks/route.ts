@@ -118,6 +118,7 @@ export async function POST(req: Request) {
 
     console.log("userId created:", evt.data.id);
     const user = await api.user.createUser({
+      clerkId: id,
       name,
       email: email ?? "",
       role: "user",

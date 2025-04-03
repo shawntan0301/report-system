@@ -35,11 +35,12 @@ enum ReportType {
 }
 
 model user {
-  id         BigInt   @id @default(autoincrement())
-  email      String   @unique
-  name       String?
-  role       UserRole @default(user)
-  created_at DateTime @default(now())
+  id          BigInt   @id @default(autoincrement())
+  clerk_id    String   @unique
+  email       String   @unique
+  name        String?
+  role        UserRole @default(user)
+  created_at  DateTime @default(now())
 
   submitted_reports report[] @relation("ReportSubmittedBy")
   resolved_reports  report[] @relation("ReportResolvedBy")
