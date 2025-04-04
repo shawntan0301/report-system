@@ -34,6 +34,17 @@ export const reportRouter = createTRPCRouter({
         });
       }
 
+      const user = await ctx.db.user.findUnique({
+        where: { clerk_id: ctx.session.userId },
+        select: { id: true },
+      });
+
+      if (!user) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "User not found",
+        });
+      }
       // Create the report
       const report = await ctx.db.report.create({
         data: {
@@ -41,7 +52,7 @@ export const reportRouter = createTRPCRouter({
           target_id: targetId,
           reason,
           description,
-          submitted_by: BigInt(ctx.session.userId),
+          submitted_by: user.id,
           created_at: new Date(),
         },
       });
@@ -96,14 +107,13 @@ export const reportRouter = createTRPCRouter({
 
   getAllReportsHeaders: protectedProcedure.query(async ({ ctx }) => {
     console.log("User ID:", ctx.session.userId);
-    const userId = BigInt(ctx.session.userId);
+    const clerkId = ctx.session.userId;
 
-    const userRole = await ctx.db.user.findUnique({
-      where: { id: userId },
-      select: { role: true },
+    const user = await ctx.db.user.findUnique({
+      where: { clerk_id: clerkId },
     });
 
-    if (!userRole) {
+    if (!user?.role) {
       // If userRole is not found, throw an error.
       throw new TRPCError({
         code: "UNAUTHORIZED",
@@ -111,7 +121,7 @@ export const reportRouter = createTRPCRouter({
       });
     }
 
-    if (userRole?.role == UserRole.admin) {
+    if (user.role == UserRole.admin) {
       return await ctx.db.report.findMany({
         select: {
           id: true,
@@ -120,11 +130,13 @@ export const reportRouter = createTRPCRouter({
           reason: true,
           submitted_by: true,
           created_at: true,
+          resolved_at: true,
+          resolved_by: true,
         },
       });
     } else {
       return await ctx.db.report.findMany({
-        where: { submitted_by: userId },
+        where: { submitted_by: user.id },
         select: {
           id: true,
           type: true,
@@ -132,6 +144,8 @@ export const reportRouter = createTRPCRouter({
           reason: true,
           submitted_by: true,
           created_at: true,
+          resolved_at: true,
+          resolved_by: true,
         },
       });
     }
@@ -151,5 +165,37 @@ export const reportRouter = createTRPCRouter({
           resolved_by: BigInt(ctx.session.userId),
         },
       });
+    }),
+
+  getReportById: protectedProcedure
+    .input(
+      z.object({
+        id: z.bigint(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const report = await ctx.db.report.findUnique({
+        where: { id: input.id },
+        select: {
+          id: true,
+          type: true,
+          target_id: true,
+          reason: true,
+          description: true,
+          submitted_by: true,
+          resolved_by: true,
+          resolved_at: true,
+          created_at: true,
+        },
+      });
+
+      if (!report) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Report not found",
+        });
+      }
+
+      return report;
     }),
 });

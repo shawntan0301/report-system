@@ -52,16 +52,16 @@ export const userRouter = createTRPCRouter({
 
   getUserRole: protectedProcedure.query(async ({ ctx }) => {
     const user = await ctx.db.user.findUnique({
-      where: { id: Number(ctx.session.userId) },
+      where: { clerk_id: ctx.session.userId },
       select: { role: true },
     });
 
-    if (!user) {
-      throw new TRPCError({
-        code: "NOT_FOUND",
-        message: "User not found",
-      });
-    }
-    return user.role;
+    // if (!user) {
+    //   throw new TRPCError({
+    //     code: "NOT_FOUND",
+    //     message: "User not found",
+    //   });
+    // }
+    return user;
   }),
 });

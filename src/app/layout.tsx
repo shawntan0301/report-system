@@ -5,7 +5,7 @@ import { Geist } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
 
 import { TRPCReactProvider } from "~/trpc/react";
-// import { ThemeProvider } from "~/components/providers/theme-providers";
+import { Toaster } from "~/components/ui/sonner";
 
 export const metadata: Metadata = {
   title: "Report System",
@@ -25,7 +25,10 @@ export default function RootLayout({
     <html lang="en" className={`${geist.variable}`}>
       <body>
         <ClerkProvider>
-          <TRPCReactProvider>{children}</TRPCReactProvider>
+          <TRPCReactProvider>
+            {children}
+            <Toaster />
+          </TRPCReactProvider>
         </ClerkProvider>
       </body>
     </html>

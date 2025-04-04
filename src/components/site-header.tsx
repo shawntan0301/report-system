@@ -1,4 +1,7 @@
 import { Separator } from "~/components/ui/separator";
+import { SignOutButton } from "@clerk/nextjs";
+import { Button } from "./ui/button";
+import { MoveRight } from "lucide-react";
 
 export function SiteHeader() {
   return (
@@ -10,6 +13,13 @@ export function SiteHeader() {
         />
         <h1 className="text-base font-medium">All Reports</h1>
         <div className="ml-auto flex items-center gap-2"></div>
+        <div>
+          <SignOutButton>
+            <Button size="lg" className="gap-4">
+              Sign Out <MoveRight className="h-4 w-4" />
+            </Button>
+          </SignOutButton>
+        </div>
       </div>
     </header>
   );

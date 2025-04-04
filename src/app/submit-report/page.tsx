@@ -32,11 +32,21 @@ import { Input } from "~/components/ui/input";
 import { Textarea } from "~/components/ui/textarea";
 import { CommandItem } from "cmdk";
 import { useRouter } from "next/navigation";
+import { api } from "~/trpc/react";
+import { ReportType } from "@prisma/client";
 
-const reportTypes = ["Review", "User", "Business", "Service", "Other"] as const;
+// const reportTypes = {
+//   Review: "review",
+//   User: "user",
+//   Business: "business",
+//   Service: "service",
+//   Other: "other",
+// } as const;
+
+const reportType = Object.keys(ReportType) as [keyof typeof ReportType];
 
 const formSchema = z.object({
-  reportType: z.enum(reportTypes),
+  reportType: z.enum(reportType),
   targetId: z.string().min(1, "Target ID is required"),
   reason: z.string().min(3, "Reason is too short"),
   description: z.string().optional(),
@@ -44,25 +54,34 @@ const formSchema = z.object({
 
 export default function ProfileForm() {
   const router = useRouter();
+  console.log(reportType);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      reportType: reportTypes[0],
+      reportType: reportType[0],
       targetId: "",
       reason: "",
       description: "",
     },
   });
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
+  const createReportMutation = api.report.createReport.useMutation();
+
+  function onSubmit() {
     try {
-      console.log(values);
-      toast(
-        <pre className="mt-2 w-[340px] rounded-md bg-slate-950 p-4">
-          <code className="text-white">{JSON.stringify(values, null, 2)}</code>
-        </pre>,
-      );
+      const values = form.getValues();
+      createReportMutation.mutate({
+        reportType: values.reportType,
+        targetId: BigInt(values.targetId),
+        reason: values.reason,
+        description: values.description,
+      });
+      // toast(
+      //   <pre className="mt-2 w-[340px] rounded-md bg-slate-950 p-4">
+      //     <code className="text-white">{JSON.stringify(values, null, 2)}</code>
+      //   </pre>,
+      // );
     } catch (error) {
       console.error("Form submission error", error);
       toast.error("Failed to submit the form. Please try again.");
@@ -95,7 +114,10 @@ export default function ProfileForm() {
                             !field.value && "text-muted-foreground",
                           )}
                         >
-                          {field.value ? field.value : "Select report type"}
+                          {field.value
+                            ? field.value.charAt(0).toUpperCase() +
+                              field.value.slice(1)
+                            : "Select report type"}
                           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                         </Button>
                       </FormControl>
@@ -106,24 +128,25 @@ export default function ProfileForm() {
                         <CommandList>
                           <CommandEmpty>No report types found.</CommandEmpty>
                           <CommandGroup>
-                            {reportTypes.map((reportType) => (
+                            {reportType.map((type) => (
                               <CommandItem
-                                key={reportType}
-                                onSelect={(currentValue) => {
-                                  field.onChange(currentValue);
-                                  toast(`Report type set to ${currentValue}`);
+                                key={type}
+                                onSelect={() => {
+                                  field.onChange(type);
+                                  toast(`Report type set to ${type}`);
                                 }}
-                                className="flex items-center text-sm" // Added flex and items-center
+                                className="flex items-center text-sm"
                               >
                                 <Check
                                   className={cn(
                                     "mr-2 h-4 w-4",
-                                    field.value === reportType
+                                    field.value === type
                                       ? "opacity-100"
                                       : "opacity-0",
                                   )}
                                 />
-                                {reportType}
+                                {type.charAt(0).toUpperCase() + type.slice(1)}
+                                {/* <-- This is the single item, e.g. "review" */}
                               </CommandItem>
                             ))}
                           </CommandGroup>
@@ -189,7 +212,13 @@ export default function ProfileForm() {
                 </FormItem>
               )}
             />
-            <Button type="submit" onClick={() => router.push("/dashboard")}>
+            <Button
+              type="submit"
+              onClick={() => {
+                toast.success("Report submitted successfully!");
+                router.push("/dashboard");
+              }}
+            >
               Submit
             </Button>
           </form>
