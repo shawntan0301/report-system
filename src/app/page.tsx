@@ -1,6 +1,5 @@
 import { HydrateClient } from "~/trpc/server";
 import HomeButtons from "./_components/home-buttons";
-// import '@/styles/globals.css'
 
 export default async function Home() {
   return (

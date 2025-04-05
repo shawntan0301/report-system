@@ -1,7 +1,6 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { api } from "~/trpc/react";
 import {
   Table,
   TableCaption,
@@ -12,57 +11,133 @@ import {
   TableCell,
 } from "~/components/ui/table";
 import { Button } from "~/components/ui/button";
-import { skipToken } from "@tanstack/react-query";
 import { toast } from "sonner";
+import type { report, user } from "@prisma/client";
+import SuperJSON from "superjson";
+import { useMutation, useQuery } from "@tanstack/react-query";
+
+const fetchReport = async (id: string) => {
+  const res = await fetch(`/api/report?id=${id}`);
+  if (!res.ok) {
+    throw new Error("Failed to fetch report");
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+  const resJson = await res.json();
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+  const parsedJSON: report = SuperJSON.deserialize(resJson);
+  return parsedJSON;
+};
+
+const fetchUser = async () => {
+  const res = await fetch("/api/user");
+  if (!res.ok) {
+    throw new Error("Failed to fetch user");
+  }
+
+  const parsedJSON = (await res.json()) as user;
+  return parsedJSON;
+};
+
+const resolveReport = async (id: string) => {
+  try {
+    const res = await fetch("/api/report", {
+      method: "PUT",
+      body: JSON.stringify({ id }),
+    });
+
+    const resJson: string = await res.text();
+    return SuperJSON.parse(resJson);
+  } catch (error) {
+    console.error("Error resolving report:", error);
+    throw new Error("Failed to resolve report");
+  }
+};
 
 export default function View() {
   const { view } = useParams();
-  // Assuming your dynamic route folder is [view] and contains the reportId
-  const reportId = Array.isArray(view) ? view[0] : null;
+  const reportId = Array.isArray(view) ? view[0] : view;
   const router = useRouter();
 
-  // Fetch report details
+  // // Fetch report details
+  // const {
+  //   data: report,
+  //   isLoading,
+  //   error,
+  // } = api.report.getReportById.useQuery(
+  //   reportId ? { id: reportId } : skipToken,
+  //   {
+  //     refetchOnWindowFocus: false,
+  //     refetchOnMount: false,
+  //     enabled: !!reportId,
+  //   },
+  // );
+
+  // // Fetch the current user's role
+  // const {
+  //   data: user,
+  //   isLoading: roleLoading,
+  //   error: roleError,
+  // } = api.user.getUserRole.useQuery(undefined, {
+  //   refetchOnWindowFocus: false,
+  //   refetchOnReconnect: false,
+  // });
+
+  // // Mutation for resolving the report
+  // const resolveReportMutation = api.report.resolveReport.useMutation({
+  //   onSuccess: () => {
+  //     toast.success("Report resolved successfully");
+  //   },
+  //   onError: (error) => {
+  //     toast.error(`Error resolving report: ${error.message}`);
+  //   },
+  // });
+
   const {
     data: report,
-    isLoading,
-    error,
-  } = api.report.getReportById.useQuery(
-    reportId ? { id: reportId } : skipToken,
-    {
-      refetchOnWindowFocus: false,
-      refetchOnMount: false,
-      enabled: !!reportId,
-    },
-  );
+    isLoading: reportLoading,
+    error: reportError,
+  } = useQuery({
+    queryKey: ["report", reportId],
+    queryFn: () => fetchReport(reportId ?? ""),
+    enabled: !!reportId,
+  });
 
-  // Fetch the current user's role
   const {
     data: user,
-    isLoading: roleLoading,
-    error: roleError,
-  } = api.user.getUserRole.useQuery(undefined, {
-    refetchOnWindowFocus: false,
-    refetchOnReconnect: false,
+    isLoading: userLoading,
+    error: userError,
+  } = useQuery({
+    queryKey: ["user"],
+    queryFn: fetchUser,
   });
 
-  // Mutation for resolving the report
-  const resolveReportMutation = api.report.resolveReport.useMutation({
+  const resolveMutation = useMutation({
+    mutationFn: () => resolveReport(reportId ?? ""),
     onSuccess: () => {
       toast.success("Report resolved successfully");
+      setTimeout(() => router.push("/dashboard"), 100);
     },
-    onError: (error) => {
-      toast.error(`Error resolving report: ${error.message}`);
+    onError: (error: unknown) => {
+      toast.error(`Error resolving report: ${(error as Error).message}`);
     },
   });
 
-  if (isLoading || roleLoading) return <p>Loading...</p>;
-  if (error || !report || roleError || !user)
-    return <p>Error loading report.</p>;
   const handleResolve = () => {
     if (reportId) {
-      resolveReportMutation.mutate({ id: reportId });
+      resolveMutation.mutate();
     }
   };
+
+  if (reportLoading || userLoading) return <p>Loading...</p>;
+  if (reportError || !report) return <p>Error loading report.</p>;
+  if (userError || !user) return <p>Error loading user.</p>;
+
+  // const handleResolve = () => {
+  //   if (reportId) {
+  //     resolveReportMutation.mutate({ id: reportId });
+  //   }
+  // };
 
   return (
     <div className="mx-auto w-[60%] p-4 py-20">

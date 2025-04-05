@@ -32,16 +32,9 @@ import { Input } from "~/components/ui/input";
 import { Textarea } from "~/components/ui/textarea";
 import { CommandItem } from "cmdk";
 import { useRouter } from "next/navigation";
-import { api } from "~/trpc/react";
 import { ReportType } from "@prisma/client";
-
-// const reportTypes = {
-//   Review: "review",
-//   User: "user",
-//   Business: "business",
-//   Service: "service",
-//   Other: "other",
-// } as const;
+import { useMutation } from "@tanstack/react-query";
+import SuperJSON from "superjson";
 
 const reportType = Object.keys(ReportType) as [keyof typeof ReportType];
 
@@ -53,6 +46,8 @@ const formSchema = z.object({
   reason: z.string().min(3, "Reason is too short"),
   description: z.string().optional(),
 });
+
+type FormData = z.infer<typeof formSchema>;
 
 export default function ProfileForm() {
   const router = useRouter();
@@ -68,7 +63,40 @@ export default function ProfileForm() {
     },
   });
 
-  const createReportMutation = api.report.createReport.useMutation({
+  // const createReportMutation = api.report.createReport.useMutation({
+  //   onSuccess: () => {
+  //     toast.success("Report submitted successfully!");
+  //     setTimeout(() => router.push("/dashboard"), 100);
+  //   },
+  //   onError: (error) => {
+  //     console.error("Error creating report:", error);
+  //     toast.error("Failed to submit the report. Error: " + error.message);
+  //   },
+  // });
+
+  const createReport = async (data: FormData) => {
+    try {
+      const res = await fetch("/api/report", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          reportType: data.reportType,
+          targetId: data.targetId.toString(),
+          reason: data.reason,
+          description: data.description,
+        }),
+      });
+
+      const json = await res.text();
+      return SuperJSON.parse(json);
+    } catch (error) {
+      console.error("Error creating report:", error);
+      throw new Error("Failed to create report");
+    }
+  };
+
+  const mutation = useMutation({
+    mutationFn: createReport,
     onSuccess: () => {
       toast.success("Report submitted successfully!");
       setTimeout(() => router.push("/dashboard"), 100);
@@ -82,12 +110,13 @@ export default function ProfileForm() {
   function onSubmit() {
     try {
       const values = form.getValues();
-      createReportMutation.mutate({
-        reportType: values.reportType,
-        targetId: BigInt(values.targetId),
-        reason: values.reason,
-        description: values.description,
-      });
+      // createReportMutation.mutate({
+      mutation.mutate(values);
+      //   reportType: values.reportType,
+      //   targetId: BigInt(values.targetId),
+      //   reason: values.reason,
+      //   description: values.description,
+      // });
     } catch (error) {
       console.error("Form submission error", error);
       toast.error("Failed to submit the form. Please try again.");

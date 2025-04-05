@@ -13,36 +13,86 @@ import {
   TableCell,
 } from "~/components/ui/table";
 import { Button } from "~/components/ui/button";
-import { api } from "~/trpc/react";
+import { type report } from "@prisma/client";
 import Link from "next/link";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
-import { ScrollArea } from "~/components/ui/scroll-area";
+import { useQuery } from "@tanstack/react-query";
+import SuperJSON from "superjson";
+
+// const fetchReports = async () => {
+//   const res = await fetch("/api/report");
+//   if (!res.ok) {
+//     throw new Error("Network response was not ok");
+//   }
+//   const resJson: Report[] = (await res.json()) as Report[];
+//   return resJson;
+// };
+
+const fetchReports = async () => {
+  const res = await fetch("/api/report");
+  if (!res.ok) {
+    throw new Error("Failed to fetch reports");
+  }
+  const json = await res.text();
+  const parsedJSON: report[] = SuperJSON.parse(json);
+  return parsedJSON;
+};
+
+const fetchUser = async () => {
+  const res = await fetch("/api/user");
+  if (!res.ok) {
+    throw new Error("Failed to fetch user role");
+  }
+  const resJson: { role: "admin" | "user" } = (await res.json()) as {
+    role: "admin" | "user";
+  };
+  return resJson;
+};
 
 export default function Page() {
   const router = useRouter();
 
-  const { data: user } = api.user.getUserRole.useQuery(undefined, {
-    refetchOnWindowFocus: false,
-    refetchOnReconnect: false,
+  // const { data: user } = api.user.getUserRole.useQuery(undefined, {
+  //   refetchOnWindowFocus: false,
+  //   refetchOnReconnect: false,
+  // });
+  // const role = user?.role ?? "user";
+
+  // const { data: reports } = api.report.getAllReportsHeaders.useQuery(
+  //   undefined,
+  //   {
+  //     refetchOnWindowFocus: true,
+  //     refetchOnReconnect: true,
+  //     refetchOnMount: true,
+  //   },
+  // );
+
+  const { data: user } = useQuery({
+    queryKey: ["userRole"],
+    queryFn: fetchUser,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+    refetchOnMount: true,
   });
+
+  const { data: reports } = useQuery({
+    queryKey: ["reports"],
+    queryFn: fetchReports,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+    refetchOnMount: true,
+  });
+
+  console.log("Reports:", reports);
+  console.log("User Role:", user);
+
   const role = user?.role ?? "user";
 
-  const { data: reports } = api.report.getAllReportsHeaders.useQuery(
-    undefined,
-    {
-      refetchOnWindowFocus: true,
-      refetchOnReconnect: true,
-      refetchOnMount: true,
-    },
-  );
+  const [typeFilter, setTypeFilter] = useState("all");
+  const [resolutionFilter, setResolutionFilter] = useState("all");
 
-  // Filtering state:
-  const [typeFilter, setTypeFilter] = useState("all"); // "all" means no filter
-  const [resolutionFilter, setResolutionFilter] = useState("all"); // "all", "resolved", "unresolved"
-
-  // Filter the reports based on the selected filters.
-  const filteredReports = useMemo(() => {
+  const filteredReports: report[] = useMemo(() => {
     if (!reports) return [];
     return reports.filter((report) => {
       const typeMatches = typeFilter === "all" || report.type === typeFilter;
