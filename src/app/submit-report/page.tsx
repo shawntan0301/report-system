@@ -51,7 +51,6 @@ type FormData = z.infer<typeof formSchema>;
 
 export default function ProfileForm() {
   const router = useRouter();
-  console.log(reportType);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -79,7 +78,7 @@ export default function ProfileForm() {
       const res = await fetch("/api/report", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+        body: SuperJSON.stringify({
           reportType: data.reportType,
           targetId: data.targetId.toString(),
           reason: data.reason,
@@ -87,11 +86,15 @@ export default function ProfileForm() {
         }),
       });
 
-      const json = await res.text();
-      return SuperJSON.parse(json);
+      if (!res.ok) {
+        throw new Error(`${res.status} ${res.statusText}`);
+      }
+
+      const resText = await res.text();
+      return SuperJSON.parse(resText);
     } catch (error) {
       console.error("Error creating report:", error);
-      throw new Error("Failed to create report");
+      throw new Error((error as Error).message ?? "Failed to submit report");
     }
   };
 

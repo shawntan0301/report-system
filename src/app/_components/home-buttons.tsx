@@ -4,14 +4,28 @@ import { Button } from "~/components/ui/button";
 import { MoveRight } from "lucide-react";
 import { SignInButton, SignedIn, SignedOut } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
-import { api } from "~/trpc/react";
 import { toast } from "sonner";
+import { useQuery } from "@tanstack/react-query";
 
 export default function HomeButtons() {
   const router = useRouter();
-  const user = api.user.getUserRole.useQuery(undefined, {
-    refetchOnWindowFocus: false,
-    refetchOnMount: false,
+  const fetchUser = async () => {
+    const res = await fetch("/api/user");
+    if (!res.ok) {
+      throw new Error("Failed to fetch user role");
+    }
+    const resJson: { role: "admin" | "user" } = (await res.json()) as {
+      role: "admin" | "user";
+    };
+    return resJson;
+  };
+
+  const { data: user } = useQuery({
+    queryKey: ["userRole"],
+    queryFn: fetchUser,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+    refetchOnMount: true,
   });
 
   return (
@@ -26,7 +40,7 @@ export default function HomeButtons() {
       </SignedOut>
       {/* )} */}
       <SignedIn>
-        {user.data?.role === "admin" && (
+        {user?.role === "admin" && (
           <>
             <Button
               size="lg"
@@ -50,7 +64,7 @@ export default function HomeButtons() {
             </Button>
           </>
         )}
-        {user.data?.role === "user" && (
+        {user?.role === "user" && (
           <>
             <Button
               size="lg"

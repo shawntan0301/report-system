@@ -12,11 +12,6 @@ const createUserSchema = z.object({
   name: z.string().optional(),
   role: userRoleSchema,
 });
-
-const deleteUserSchema = z.object({
-  id: z.number(),
-});
-
 export async function GET(request: Request) {
   try {
     const session = await auth();
@@ -56,40 +51,6 @@ export async function POST(request: Request) {
       },
     });
     return NextResponse.json(user, { status: 201 });
-  } catch (error: unknown) {
-    const errorMessage =
-      error instanceof Error ? error.message : "Unknown error";
-    return NextResponse.json({ error: errorMessage }, { status: 500 });
-  }
-}
-
-export async function DELETE(request: Request) {
-  try {
-    const session = await auth();
-    if (!session.userId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-    const { searchParams } = new URL(request.url);
-    const idParam = searchParams.get("id");
-    if (!idParam) {
-      return NextResponse.json(
-        { error: "Missing id parameter" },
-        { status: 400 },
-      );
-    }
-    const parsed = deleteUserSchema.parse({ id: Number(idParam) });
-    const user = await db.user.findUnique({ where: { id: parsed.id } });
-    if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
-    }
-    if (user.clerk_id !== session.userId) {
-      return NextResponse.json(
-        { error: "Not authorized to delete this user" },
-        { status: 403 },
-      );
-    }
-    const deletedUser = await db.user.delete({ where: { id: parsed.id } });
-    return NextResponse.json(deletedUser, { status: 200 });
   } catch (error: unknown) {
     const errorMessage =
       error instanceof Error ? error.message : "Unknown error";

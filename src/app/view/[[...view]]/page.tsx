@@ -42,12 +42,16 @@ const fetchUser = async () => {
 const resolveReport = async (id: string) => {
   try {
     const res = await fetch("/api/report", {
-      method: "PUT",
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id }),
     });
 
-    const resJson: string = await res.text();
-    return SuperJSON.parse(resJson);
+    const resText = await res.text();
+    if (!resText.trim()) {
+      return {};
+    }
+    return SuperJSON.parse(resText);
   } catch (error) {
     console.error("Error resolving report:", error);
     throw new Error("Failed to resolve report");
@@ -115,6 +119,7 @@ export default function View() {
   const resolveMutation = useMutation({
     mutationFn: () => resolveReport(reportId ?? ""),
     onSuccess: () => {
+      console.log("Report resolved successfully");
       toast.success("Report resolved successfully");
       setTimeout(() => router.push("/dashboard"), 100);
     },
