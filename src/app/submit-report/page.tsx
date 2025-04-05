@@ -47,7 +47,9 @@ const reportType = Object.keys(ReportType) as [keyof typeof ReportType];
 
 const formSchema = z.object({
   reportType: z.enum(reportType),
-  targetId: z.string().min(1, "Target ID is required"),
+  targetId: z.bigint({
+    invalid_type_error: "Target ID must be a valid number",
+  }),
   reason: z.string().min(3, "Reason is too short"),
   description: z.string().optional(),
 });
@@ -60,13 +62,22 @@ export default function ProfileForm() {
     resolver: zodResolver(formSchema),
     defaultValues: {
       reportType: reportType[0],
-      targetId: "",
+      targetId: 1n,
       reason: "",
       description: "",
     },
   });
 
-  const createReportMutation = api.report.createReport.useMutation();
+  const createReportMutation = api.report.createReport.useMutation({
+    onSuccess: () => {
+      toast.success("Report submitted successfully!");
+      setTimeout(() => router.push("/dashboard"), 100);
+    },
+    onError: (error) => {
+      console.error("Error creating report:", error);
+      toast.error("Failed to submit the report. Error: " + error.message);
+    },
+  });
 
   function onSubmit() {
     try {
@@ -77,11 +88,6 @@ export default function ProfileForm() {
         reason: values.reason,
         description: values.description,
       });
-      // toast(
-      //   <pre className="mt-2 w-[340px] rounded-md bg-slate-950 p-4">
-      //     <code className="text-white">{JSON.stringify(values, null, 2)}</code>
-      //   </pre>,
-      // );
     } catch (error) {
       console.error("Form submission error", error);
       toast.error("Failed to submit the form. Please try again.");
@@ -167,7 +173,15 @@ export default function ProfileForm() {
                 <FormItem>
                   <FormLabel>Target ID</FormLabel>
                   <FormControl>
-                    <Input placeholder="Target ID" type="" {...field} />
+                    <Input
+                      placeholder="Target ID"
+                      type="number"
+                      {...field}
+                      value={field.value?.toString() || ""}
+                      onChange={(e) =>
+                        field.onChange(BigInt(e.target.value || "0"))
+                      }
+                    />
                   </FormControl>
                   <FormDescription>Enter the Target ID</FormDescription>
                   <FormMessage />
@@ -212,15 +226,12 @@ export default function ProfileForm() {
                 </FormItem>
               )}
             />
-            <Button
-              type="submit"
-              onClick={() => {
-                toast.success("Report submitted successfully!");
-                router.push("/dashboard");
-              }}
-            >
-              Submit
-            </Button>
+            <div className="flex items-center justify-between">
+              <Button onClick={() => router.push("/dashboard")}>
+                Back to Dashboard
+              </Button>
+              <Button type="submit">Submit</Button>
+            </div>
           </form>
         </Form>
       </div>

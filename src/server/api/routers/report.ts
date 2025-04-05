@@ -20,14 +20,23 @@ export const reportRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       const { reportType, targetId, reason, description } = input;
 
-      // Check if the report is already reported
-      const existingReport = await ctx.db.report.findFirst({
-        where: {
-          target_id: targetId,
-        },
-      });
+      const existingReport = await ctx.db.$queryRaw`
+        SELECT r.* FROM "report" r
+        WHERE r.submitted_by = (
+          SELECT u.id FROM "user" u WHERE u.clerk_id = ${ctx.session.userId} 
+        )
+        AND r."target_id" = ${targetId}
+      `;
 
-      if (existingReport) {
+      // Check if the report is already reported
+      // const existingReport = await ctx.db.report.findFirst({
+      //   where: {
+      //     clerk_id: ctx.session.userId,
+      //     target_id: targetId,
+      //   },
+      // });
+
+      if (Array.isArray(existingReport) && existingReport.length > 0) {
         throw new TRPCError({
           code: "CONFLICT",
           message: "You have already created a report with this target ID",
@@ -154,15 +163,20 @@ export const reportRouter = createTRPCRouter({
   resolveReport: protectedProcedure
     .input(
       z.object({
-        id: z.bigint(),
+        id: z.string(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      const user = await ctx.db.user.findUnique({
+        where: { clerk_id: ctx.session.userId },
+        select: { id: true },
+      });
+
       return await ctx.db.report.update({
-        where: { id: input.id },
+        where: { id: BigInt(input.id) },
         data: {
           resolved_at: new Date(),
-          resolved_by: BigInt(ctx.session.userId),
+          resolved_by: user?.id,
         },
       });
     }),
@@ -170,12 +184,12 @@ export const reportRouter = createTRPCRouter({
   getReportById: protectedProcedure
     .input(
       z.object({
-        id: z.bigint(),
+        id: z.string(),
       }),
     )
     .query(async ({ ctx, input }) => {
       const report = await ctx.db.report.findUnique({
-        where: { id: input.id },
+        where: { id: BigInt(input.id) },
         select: {
           id: true,
           type: true,

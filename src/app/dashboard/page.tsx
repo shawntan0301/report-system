@@ -16,8 +16,12 @@ import { Button } from "~/components/ui/button";
 import { api } from "~/trpc/react";
 import Link from "next/link";
 import { toast } from "sonner";
+import { useRouter } from "next/navigation";
+import { ScrollArea } from "~/components/ui/scroll-area";
 
 export default function Page() {
+  const router = useRouter();
+
   const { data: user } = api.user.getUserRole.useQuery(undefined, {
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
@@ -27,8 +31,9 @@ export default function Page() {
   const { data: reports } = api.report.getAllReportsHeaders.useQuery(
     undefined,
     {
-      refetchOnWindowFocus: false,
-      refetchOnReconnect: false,
+      refetchOnWindowFocus: true,
+      refetchOnReconnect: true,
+      refetchOnMount: true,
     },
   );
 
@@ -106,10 +111,18 @@ export default function Page() {
                   </select>
                 </div>
                 <Table>
-                  <TableCaption>A list of submitted reports</TableCaption>
+                  {filteredReports.length > 0 && (
+                    <TableCaption>A list of submitted reports</TableCaption>
+                  )}
+                  {filteredReports.length === 0 && (
+                    <TableCaption>
+                      No reports found. You can submit a new report using the
+                      button below.
+                    </TableCaption>
+                  )}
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="w-[100px]">Report ID</TableHead>
+                      <TableHead className="w-[100px]"></TableHead>
                       <TableHead>Report Type</TableHead>
                       <TableHead>Target ID</TableHead>
                       <TableHead className="text-right">Reason</TableHead>
@@ -166,6 +179,9 @@ export default function Page() {
                     ))}
                   </TableBody>
                 </Table>
+                <Button onClick={() => router.push("/submit-report")}>
+                  Submit New Report
+                </Button>
               </div>
             </div>
           </div>

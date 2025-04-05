@@ -1,6 +1,6 @@
 "use client";
 
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { api } from "~/trpc/react";
 import {
   Table,
@@ -12,41 +12,60 @@ import {
   TableCell,
 } from "~/components/ui/table";
 import { Button } from "~/components/ui/button";
+import { skipToken } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 export default function View() {
-  const params = useParams();
+  const { view } = useParams();
   // Assuming your dynamic route folder is [view] and contains the reportId
-  const { view } = params as { view: string };
-  const reportId = BigInt(view);
+  const reportId = Array.isArray(view) ? view[0] : null;
+  const router = useRouter();
 
   // Fetch report details
   const {
     data: report,
     isLoading,
     error,
-  } = api.report.getReportById.useQuery({
-    id: reportId,
-  });
+  } = api.report.getReportById.useQuery(
+    reportId ? { id: reportId } : skipToken,
+    {
+      refetchOnWindowFocus: false,
+      refetchOnMount: false,
+      enabled: !!reportId,
+    },
+  );
 
   // Fetch the current user's role
   const {
     data: user,
     isLoading: roleLoading,
     error: roleError,
-  } = api.user.getUserRole.useQuery();
+  } = api.user.getUserRole.useQuery(undefined, {
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+  });
 
   // Mutation for resolving the report
-  const resolveReportMutation = api.report.resolveReport.useMutation();
+  const resolveReportMutation = api.report.resolveReport.useMutation({
+    onSuccess: () => {
+      toast.success("Report resolved successfully");
+    },
+    onError: (error) => {
+      toast.error(`Error resolving report: ${error.message}`);
+    },
+  });
 
   if (isLoading || roleLoading) return <p>Loading...</p>;
   if (error || !report || roleError || !user)
     return <p>Error loading report.</p>;
   const handleResolve = () => {
-    resolveReportMutation.mutate({ id: reportId });
+    if (reportId) {
+      resolveReportMutation.mutate({ id: reportId });
+    }
   };
 
   return (
-    <div className="p-4">
+    <div className="mx-auto w-[60%] p-4 py-20">
       <h1 className="mb-4 text-2xl font-bold">Report Details</h1>
       <Table>
         <TableCaption>Details for Report ID: {report.id}</TableCaption>
@@ -107,14 +126,22 @@ export default function View() {
       {user.role == "admin" && !report.resolved_at && (
         <div className="mt-4">
           <Button
-            onClick={handleResolve}
+            onClick={() => {
+              handleResolve();
+              setTimeout(() => {
+                router.push("/dashboard");
+              }, 100);
+            }}
             size="sm"
-            className="bg-blue-500 text-white hover:bg-blue-600"
+            className="bg-green-500 text-white hover:bg-green-600"
           >
             Resolve Report
           </Button>
         </div>
       )}
+      <Button onClick={() => router.back()} className="mt-4">
+        Back to Dashboard
+      </Button>
     </div>
   );
 }

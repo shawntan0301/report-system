@@ -16,6 +16,7 @@ export default function HomeButtons() {
 
   return (
     <div className="flex flex-row gap-3">
+      {/* {user.isError() && ( */}
       <SignedOut>
         <SignInButton>
           <Button size="lg" className="gap-4">
@@ -23,6 +24,7 @@ export default function HomeButtons() {
           </Button>
         </SignInButton>
       </SignedOut>
+      {/* )} */}
       <SignedIn>
         {user.data?.role === "admin" && (
           <>
